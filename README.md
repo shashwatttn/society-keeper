@@ -32,7 +32,7 @@ Society Keeper is a full-stack property management application with:
 
 - Node.js 18+ (LTS)
 - npm 10+ or yarn
-- MongoDB instance (local or cloud)
+- PostgreSQL instance (local or cloud)
 
 ## 🚀 Backend setup
 
