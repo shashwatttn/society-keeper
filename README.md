@@ -40,7 +40,7 @@ Society Keeper is a full-stack property management application with:
 2. `npm install`
 3. Configure `.env` (create if missing):
    - `PORT=5000`
-   - `MONGO_URI=<your mongo url>`
+   - `DB_URL=<your postgres url>`
    - `JWT_SECRET=<your secret>`
 4. Run:
    - `npm run dev` (if script exists) or `node src/server.js`
