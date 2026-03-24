@@ -1,7 +1,7 @@
 # Society Keeper
 
 Society Keeper is a full-stack property management application with:
-- **Backend**: Node.js + Express + MongoDB for authentication, admin and resident APIs.
+- **Backend**: Node.js + Express + PostgreSQL for authentication, admin and resident APIs.
 - **Frontend**: Next.js (App Router + TypeScript) for admin/resident dashboards, flats, payments, reports.
 
 ## 📁 Project structure
@@ -10,7 +10,7 @@ Society Keeper is a full-stack property management application with:
   - `package.json`, `README.md`
   - `/src`
     - `server.js` - Express app entrypoint
-    - `/config/db.js` - MongoDB connection
+    - `/config/db.js` - PostgreSQL connection
     - `/controllers` - route handlers
     - `/middleware` - auth guards (`isAdmin`, `isResident`, etc.)
     - `/routes` - route definitions
