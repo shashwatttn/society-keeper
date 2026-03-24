@@ -693,19 +693,9 @@ export const getMonthwiseRecords = async (req, res) => {
   try {
     const { month, year } = req.query;
 
-    if (!month || !year) {
-      return res.status(400).json({
-        message: "Month and Year are required",
-      });
-    }
-
-    const records = await db.query(
+    const result = await db.query(
       `
-      SELECT 
-        mr.monthly_record_id,
-        mr.due_date,
-        mr.status,
-
+      SELECT
         fs.flat_id,
         fs.flat_no,
 
@@ -713,12 +703,16 @@ export const getMonthwiseRecords = async (req, res) => {
         u.email,
 
         s.flat_type,
-        s.subscription_fees
+        s.subscription_fees,
 
-      FROM monthly_records mr
+        COALESCE(SUM(p.amount_paid),0)::int AS amount_paid,
 
-      JOIN flat_subscriptions fs 
-        ON fs.flat_id = mr.flat_id
+        CASE 
+          WHEN SUM(p.amount_paid) IS NULL THEN 'PENDING'
+          ELSE 'PAID'
+        END AS status
+
+      FROM flat_subscriptions fs
 
       LEFT JOIN users u
         ON u.user_id = fs.user_id
@@ -726,24 +720,34 @@ export const getMonthwiseRecords = async (req, res) => {
       JOIN subscriptions s
         ON s.subscription_id = fs.subscription_id
 
-      WHERE EXTRACT(MONTH FROM mr.due_date) = $1
-      AND EXTRACT(YEAR FROM mr.due_date) = $2
-      AND fs.is_active = true
+      LEFT JOIN payments p
+        ON p.user_id = fs.user_id
+        AND EXTRACT(MONTH FROM p.payment_date) = $1
+        AND EXTRACT(YEAR FROM p.payment_date) = $2
 
-      ORDER BY fs.flat_no ASC
+      WHERE fs.is_active = true
+
+      GROUP BY
+        fs.flat_id,
+        fs.flat_no,
+        u.full_name,
+        u.email,
+        s.flat_type,
+        s.subscription_fees
+
+      ORDER BY fs.flat_no
       `,
       [month, year]
     );
 
     return res.json({
-      message: "Monthly records fetched",
-      result: records.rows,
+      result: result.rows,
     });
 
   } catch (err) {
     console.log(err);
-    return res.status(500).json({
-      message: "Failed to fetch monthly records",
+    res.status(500).json({
+      message: "Failed",
     });
   }
 };
