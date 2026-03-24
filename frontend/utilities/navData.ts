@@ -32,7 +32,12 @@
         "path" :"/admin/notifications"
       },
       {
-        "id": 7,
+        "id" : 7,
+        "name" : "Monthly-Records",
+        "path" : "/admin/monthly-records"
+      },
+      {
+        "id": 8,
         "name": "Profile",
         "path": "/admin/profile"
       }

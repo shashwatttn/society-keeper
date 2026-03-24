@@ -13,7 +13,8 @@ import {
   getFlatById,
   updateFlat,
   addPayment,
-  sendNotifications
+  sendNotifications,
+  getMonthwiseRecords
 } from "../controllers/adminController.js";
 import { authenticate } from "../middleware/middleware.js";
 import { isAdmin } from "../middleware/isAdmin.js";
@@ -48,6 +49,8 @@ router.delete("/delete-flat", authenticate, isAdmin, deleteFlat);
 
 router.post("/add-payment", authenticate, isAdmin, addPayment);
 
-router.post("/send-notification",authenticate,isAdmin,sendNotifications)
+router.post("/send-notification",authenticate,isAdmin,sendNotifications);
+
+router.get("/monthly-records",authenticate,isAdmin,getMonthwiseRecords);
 
 export default router;

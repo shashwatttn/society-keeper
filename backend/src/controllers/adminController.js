@@ -686,3 +686,64 @@ export const getPaymentReports = async (req, res) => {
     });
   }
 };
+
+
+
+export const getMonthwiseRecords = async (req, res) => {
+  try {
+    const { month, year } = req.query;
+
+    if (!month || !year) {
+      return res.status(400).json({
+        message: "Month and Year are required",
+      });
+    }
+
+    const records = await db.query(
+      `
+      SELECT 
+        mr.monthly_record_id,
+        mr.due_date,
+        mr.status,
+
+        fs.flat_id,
+        fs.flat_no,
+
+        u.full_name,
+        u.email,
+
+        s.flat_type,
+        s.subscription_fees
+
+      FROM monthly_records mr
+
+      JOIN flat_subscriptions fs 
+        ON fs.flat_id = mr.flat_id
+
+      LEFT JOIN users u
+        ON u.user_id = fs.user_id
+
+      JOIN subscriptions s
+        ON s.subscription_id = fs.subscription_id
+
+      WHERE EXTRACT(MONTH FROM mr.due_date) = $1
+      AND EXTRACT(YEAR FROM mr.due_date) = $2
+      AND fs.is_active = true
+
+      ORDER BY fs.flat_no ASC
+      `,
+      [month, year]
+    );
+
+    return res.json({
+      message: "Monthly records fetched",
+      result: records.rows,
+    });
+
+  } catch (err) {
+    console.log(err);
+    return res.status(500).json({
+      message: "Failed to fetch monthly records",
+    });
+  }
+};
