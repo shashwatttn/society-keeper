@@ -223,7 +223,7 @@ export const addPayment = async (req, res) => {
       WHERE flat_no = $1
       AND is_active = true
       `,
-      [flat_no]
+      [flat_no],
     );
 
     if (!flatRes.rows.length) {
@@ -252,7 +252,7 @@ export const addPayment = async (req, res) => {
       AND EXTRACT(YEAR FROM due_date) = EXTRACT(YEAR FROM CURRENT_DATE)
       LIMIT 1
       `,
-      [flat_id, month]
+      [flat_id, month],
     );
 
     if (!recordRes.rows.length) {
@@ -279,7 +279,7 @@ export const addPayment = async (req, res) => {
       VALUES ($1,$2,$3,CURRENT_DATE)
       RETURNING *
       `,
-      [user_id, amount_paid, mode_of_payment]
+      [user_id, amount_paid, mode_of_payment],
     );
 
     // Update billing status
@@ -289,7 +289,7 @@ export const addPayment = async (req, res) => {
       SET status = 'PAID'
       WHERE monthly_record_id = $1
       `,
-      [record.monthly_record_id]
+      [record.monthly_record_id],
     );
 
     await client.query("COMMIT");
@@ -298,7 +298,6 @@ export const addPayment = async (req, res) => {
       message: "Payment recorded successfully",
       payment: payment.rows[0],
     });
-
   } catch (err) {
     await client.query("ROLLBACK");
     console.log(err);
@@ -451,7 +450,7 @@ export const deleteFlat = async (req, res) => {
 
     const query = `
                 UPDATE FLAT_SUBSCRIPTIONS
-                SET IS_ACTIVE = FALSE
+                SET IS_ACTIVE = FALSE , USER_ID = NULL
                 WHERE FLAT_ID = $1
         `;
     const values = [flat_id];
@@ -554,8 +553,9 @@ export const getAdminDashboardStats = async (req, res) => {
       // TOTAL FLATS
       db.query(`
         SELECT COUNT(*)::int AS total
-        FROM flat_subscriptions
+        FROM flat_subscriptions where user_id is not null
         `),
+      // WHERE IS_ACTIVE = TRUE
 
       // OCCUPIED FLATS
       db.query(`
@@ -601,7 +601,7 @@ export const getAdminDashboardStats = async (req, res) => {
         WHERE mr.status = 'PENDING'
         AND DATE_TRUNC('month', mr.due_date)
               = DATE_TRUNC('month', CURRENT_DATE)
-        AND fs.is_active = true
+        AND fs.is_active = true AND fs.user_id IS NOT NULL
       `),
     ]);
 
@@ -635,34 +635,43 @@ export const getPaymentReports = async (req, res) => {
     }
 
     const summaryQuery = `
-      SELECT 
-        COUNT(*) FILTER (WHERE mr.status = 'PAID') AS total_paid_flats,
-        COUNT(*) FILTER (WHERE mr.status != 'PAID') AS total_pending_flats,
-        COALESCE(SUM(p.amount_paid),0) AS total_collection
-      FROM monthly_records mr
-      LEFT JOIN flat_subscriptions fs ON fs.flat_id = mr.flat_id
-      LEFT JOIN payments p ON p.user_id = fs.user_id
-      WHERE 1=1 ${dateFilter}
-    `;
+    SELECT 
+      COUNT(*) FILTER (WHERE mr.status = 'PAID')::int AS total_paid_flats,
+      COUNT(*) FILTER (WHERE mr.status != 'PAID')::int AS total_pending_flats,
+      COALESCE(SUM(p.amount_paid),0)::int AS total_collection
+    FROM monthly_records mr
+    LEFT JOIN flat_subscriptions fs 
+      ON fs.flat_id = mr.flat_id
+    LEFT JOIN payments p 
+      ON p.user_id = fs.user_id
+      AND DATE_TRUNC('month', p.payment_date)
+          = DATE_TRUNC('month', mr.due_date)
+    WHERE 1=1 ${dateFilter}
+`;
 
     const summaryResult = await db.query(summaryQuery, values);
 
     // Detailed Report Rows
     const reportQuery = `
-      SELECT
-        fs.flat_no,
-        u.full_name,
-        mr.due_date,
-        mr.status,
-        COALESCE(SUM(p.amount_paid),0) AS amount_paid
-      FROM monthly_records mr
-      JOIN flat_subscriptions fs ON fs.flat_id = mr.flat_id
-      LEFT JOIN users u ON u.user_id = fs.user_id
-      LEFT JOIN payments p ON p.user_id = u.user_id
-      WHERE 1=1 ${dateFilter}
-      GROUP BY fs.flat_no, u.full_name, mr.due_date, mr.status
-      ORDER BY mr.due_date DESC
-    `;
+    SELECT
+      fs.flat_no,
+      u.full_name,
+      mr.due_date,
+      mr.status,
+      COALESCE(SUM(p.amount_paid),0)::int AS amount_paid
+    FROM monthly_records mr
+    JOIN flat_subscriptions fs 
+      ON fs.flat_id = mr.flat_id
+    LEFT JOIN users u 
+      ON u.user_id = fs.user_id
+    LEFT JOIN payments p 
+      ON p.user_id = u.user_id
+      AND DATE_TRUNC('month', p.payment_date)
+          = DATE_TRUNC('month', mr.due_date)
+    WHERE 1=1 ${dateFilter}
+    GROUP BY fs.flat_no, u.full_name, mr.due_date, mr.status
+    ORDER BY mr.due_date DESC
+`;
 
     const reportRows = await db.query(reportQuery, values);
 
