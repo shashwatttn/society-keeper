@@ -67,4 +67,4 @@ Society Keeper is a full-stack property management application with:
 ## 📌 Notes
 
 - Use consistent `.env` values in both services if frontend calls backend by domain.
-- Backend default route usually at `http://localhost:5000/api`.
+- Backend default route usually at `http://localhost:4000`.
